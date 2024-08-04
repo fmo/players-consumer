@@ -8,7 +8,6 @@ import (
 	"github.com/fmo/players-consumer/internal/database"
 	"github.com/fmo/players-consumer/internal/kafka"
 	"github.com/fmo/players-consumer/internal/models"
-	"github.com/fmo/players-consumer/internal/s3"
 	"github.com/fmo/players-consumer/internal/services"
 	"github.com/google/uuid"
 	"github.com/joho/godotenv"
@@ -45,11 +44,6 @@ func main() {
 		database.NewDbAdapter(),
 		logger,
 	)
-
-	s3Service, err := s3.NewS3Service(logger)
-	if err != nil {
-		logger.Fatalf("cant connect to s3 %v", err)
-	}
 
 	msgNumber := 0
 
@@ -120,30 +114,14 @@ func main() {
 				}).Info("New player will be created")
 			}
 
-			imageAlreadyUploaded := false
-			imageInfo := ""
-			if player.Photo != "" {
-				imageAlreadyUploaded, err = s3Service.Save(p)
-				if err != nil {
-					logger.Error(err)
-				} else {
-					if imageAlreadyUploaded {
-						imageInfo = "image already before uploaded"
-					} else {
-						imageInfo = "image uploaded"
-					}
-				}
-			}
-
 			_, err = playersService.CreateOrUpdate(p)
 			if err != nil {
 				logger.Fatalf("Got error calling PutItem: %s", err)
 			}
 
 			logger.WithFields(log.Fields{
-				"playerImage": imageInfo,
-				"playerId":    p.ApiFootballId,
-				"teamName":    p.Team,
+				"playerId": p.ApiFootballId,
+				"teamName": p.Team,
 			}).Infof("inserted or updated %s %s to the database", p.Firstname, p.Lastname)
 		}
 	}
